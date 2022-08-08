@@ -1,0 +1,50 @@
+@import 'sass/font';
+@import 'sass/variables';
+@import 'sass/grid';
+
+
+
+body{
+    margin:0;
+    position:absolute;
+    top:0;
+    left:0;
+    background-color:#fff;
+    background-image:none;
+    min-height:1000px;
+    width:100vw;
+    overflow-x:hidden;
+    font-family:$MaisonNeue;
+    font-size:$normal;
+    font-weight:$regular;
+    color:$darkBlue;
+    line-height:1.4;
+   
+    -webkit-font-smoothing: antialiased;
+  
+  }
+
+  h1 {
+      font-weight:$bold;
+      font-size:$big;
+  }
+
+  $canvas-width:900px;
+  $canvas-height:500px;
+
+  .header{
+      height:60px;
+      padding: 40px 60px;
+      .header-content{
+        width:$canvas-width;
+        margin:0 auto;
+      }
+  }
+
+  .p5-canvas{
+      margin:1em auto;
+      //border:1px solid $g773;
+      height:$canvas-height;
+      width:$canvas-width;
+      background-color:#fff;
+  }
