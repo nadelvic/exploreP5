@@ -16,13 +16,17 @@ function draw(){
     //ellipse(x,y,width,height);
     //ellipse(30,30,50,50);
     noStroke();
+
+    // RASTER.
     const rasterParameter = {
         fillPourcentage: .5,
         tileSize: 4,
         shiftAmplitude: .2,
         lineDisplay: false,
         gradientDisplay: true,
-        gradientAngle: 90
+        gradientAngle:  45,
+        gradientBreadth: .4, // Value between 0 and 1
+        shape: 'SQUARE'
     }
     generateRaster(rasterParameter);
     //export in csv
@@ -86,12 +90,15 @@ function generateRaster(parameters){
         cornerMax = cornerCoordinates.bottomRight;
     }
 
-    displayDot(cornerMin.x,cornerMin.y,0,254,0);
+    // DEBUG
+    //displayDot(cornerMin.x,cornerMin.y,0,254,0);
     //displayDot(0,0,0,255,0);
-    displayDot(cornerMax.x,cornerMax.y,255,0,0);
+    //displayDot(cornerMax.x,cornerMax.y,255,0,0);
+
+
     //compute PMin and PMax the two extreme point on the axis of the gradient corresponding respectively to opacity 0 and 1.
-    const PMax = getProjectionCoord(angle,centerPosition.x,centerPosition.y,cornerMin.x,cornerMin.y,0);
-    const PMin = getProjectionCoord(angle,centerPosition.x,centerPosition.y,cornerMax.x,cornerMax.y,0);
+    const PMin = getProjectionCoord(angle,centerPosition.x,centerPosition.y,cornerMin.x,cornerMin.y,-1);
+    const PMax = getProjectionCoord(angle,centerPosition.x,centerPosition.y,cornerMax.x,cornerMax.y,-1);
     // The length between PMin and PMax and the axis of the gradient.
     const rangeLength = PMax - PMin;
     // Let's package all the value necessary for computing the projectionValue (and thus opacity) of each shape.
@@ -100,7 +107,8 @@ function generateRaster(parameters){
         centerPosition : centerPosition,
         PMin : PMin,
         PMax : PMax,
-        rangeLength : rangeLength
+        rangeLength : rangeLength,
+        gradientBreadth: parameters.gradientBreadth
     };
     console.log(gradientParameter);
 
@@ -128,7 +136,7 @@ function generateRaster(parameters){
             fill(10);
             const displayProbability = getProbability(parameters.gradientDisplay ? 'GRADIENT': 'LINEAR',centerTileX,centerTileY,gradientParameter,nProcessed)
             nProcessed++;
-            generateShape('CIRCLE',circleDiameter,posX,posY,displayProbability);
+            generateShape(parameters.shape,circleDiameter,posX,posY,displayProbability);
         }
     }
     console.log(nProcessed);
@@ -146,18 +154,30 @@ function generateRaster(parameters){
 function getProbability(GradientFunction,xCoord,yCoord,gradientParameter,i){
     if(GradientFunction == 'GRADIENT'){
         const PCoord = getProjectionCoord(gradientParameter.angle,gradientParameter.centerPosition.x,gradientParameter.centerPosition.y,xCoord,yCoord,i);
-        const res = {
-            xCoord: xCoord,
-            yCoord: yCoord,
-            pCoord:PCoord
-        }
-        //if(i % 100 == 0) console.log(res);
-        return getPositionRelativeValue(gradientParameter.rangeLength,gradientParameter.PMin,PCoord)
+        
+        let posValue = getPositionRelativeValue(gradientParameter.rangeLength,gradientParameter.PMin,PCoord)
+        const b = gradientParameter.gradientBreadth;
+        posValue = smoothstep(.5 - b/2,.5 + b/2,posValue);
+        return posValue;
     }
     else {
         return 1;
     }
 }
+
+function smoothstep (edge0, edge1, x){
+   if (x < edge0)
+      return 0;
+
+   if (x >= edge1)
+      return 1;
+
+   // Scale/bias into [0..1] range
+   x = (x - edge0) / (edge1 - edge0);
+
+   return x * x * (3 - 2 * x);
+}
+
 
 
 /**
@@ -184,20 +204,27 @@ function getDistanceBetweenPoint(aX,aY,bX,bY){
  */
 function getProjectionCoord(theta,centerX,centerY,pX,pY,i){
     // Distance to the center
-    const D = getDistanceBetweenPoint(centerX,centerY,pX,pY);
+    const pYR = canvasHeight - pY;
+    const D = getDistanceBetweenPoint(centerX,centerY,pX,pYR);
     // Let's compute the angle between  the point and the original grid.
     let alpha = 0;
+    
     let x = pX - centerX;
-    let y = pY - centerY;
+    let y = pYR - centerY;
     if(x >= 0){
         alpha = Math.atan(y/x) * 180 / Math.PI;   
     } else {
         alpha = Math.atan(y/x) * 180 / Math.PI + 180 ;
     }
-    //if(i%10 == 0) console.log(alpha);
+    
 
     // beta is the angle between the axis point center and the axis with the angle theta.
     let beta = theta - alpha;
+    if(i < 0){
+        console.log(theta);
+        console.log(alpha);
+        console.log(beta);
+    } 
     let projCoordinate = Math.cos(radians(beta)) * D;
     return projCoordinate;
 }
@@ -238,6 +265,7 @@ function generateShift(amplitude,boundarySize){
 function generateShape(shapeType,size,posX,posY,displayProbability){
     if(random(0,1) <= displayProbability){
         if(shapeType == 'SQUARE'){
+            fill(10);
             square(posX,posY,size);
         }
         else{
